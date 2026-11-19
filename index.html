@@ -222,7 +222,7 @@
                 </div>
 
                 <!-- คอนเทนเนอร์วงล้อ + เข็มชี้ + ไฟ LED -->
-                <div class="relative w-full max-w-[430px] aspect-square flex items-center justify-center my-1">
+                <div id="wheelWrapper" class="relative w-full max-w-[440px] aspect-square flex items-center justify-center my-1 transition-all duration-300">
                     <!-- แสงออร่าด้านหลังวงล้อ -->
                     <div id="wheelAura" class="wheel-aura absolute inset-2 rounded-full pointer-events-none"></div>
 
@@ -260,6 +260,9 @@
                             <span class="text-4xl mb-2">🎉</span>
                             <h3 class="font-display text-lg sm:text-xl font-bold text-slate-800">ยังไม่มีรายชื่อในวงล้อ</h3>
                             <p class="text-xs sm:text-sm text-slate-500 mt-1">เพิ่มรายชื่อทางด้านขวา<br>หรือกดคืนค่ารายชื่อเพื่อเริ่มรอบใหม่</p>
+                            <button id="viewFinalResultsBtn" onclick="openFinalResultsModal()" class="hidden mt-3 px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold text-xs sm:text-sm shadow-md transition">
+                                🏆 ดูสรุปลำดับทั้งหมด
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -379,6 +382,44 @@
             <div class="mt-6 pt-4 border-t border-slate-100">
                 <button onclick="closeWinnerModalWithoutRemoving()" class="text-xs text-slate-400 hover:text-slate-600 underline underline-offset-2 transition cursor-pointer">
                     ปิดหน้าต่างโดยไม่ลบชื่อนี้ออกจากวงล้อ
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===================================================================== -->
+    <!-- หน้าต่างสรุปลำดับทั้งหมดเมื่อสุ่มครบทุกคน (Final Summary Modal) -->
+    <!-- ===================================================================== -->
+    <div id="finalResultsModal" class="hidden modal-backdrop bg-slate-950/75 backdrop-blur-md">
+        <div class="animate-pop-in bg-white text-slate-800 w-full max-w-2xl mx-auto rounded-3xl p-6 sm:p-8 shadow-2xl border border-white/60 flex flex-col max-h-[90vh]">
+            <div class="text-center mb-5 shrink-0">
+                <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-gradient-to-r from-amber-100 to-orange-100 text-amber-800 font-display font-bold text-sm sm:text-base mb-2 shadow-sm">
+                    <span>🎉</span>
+                    <span>สุ่มครบทุกคนเรียบร้อยแล้ว!</span>
+                </div>
+                <h2 id="finalModalTitle" class="font-display text-2xl sm:text-3xl font-extrabold text-slate-800">
+                    สรุปลำดับคิวทั้งหมด
+                </h2>
+                <p class="text-xs sm:text-sm text-slate-500 mt-1">เรียงตามลำดับผู้โชคดีที่ถูกสุ่มได้ (ก่อน - หลัง)</p>
+            </div>
+
+            <!-- รายการสรุปลำดับทั้งหมด -->
+            <div id="finalResultsGrid" class="flex-1 overflow-y-auto space-y-2.5 pr-1 mb-6">
+                <!-- เติมรายการด้วย JavaScript -->
+            </div>
+
+            <!-- ปุ่มจัดการด้านล่าง -->
+            <div class="flex flex-col sm:flex-row gap-2.5 shrink-0 pt-2 border-t border-slate-100">
+                <button onclick="copyResultsToClipboard()" class="flex-1 py-3.5 px-5 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-display font-bold text-base shadow-lg shadow-emerald-500/25 transition flex items-center justify-center gap-2 cursor-pointer">
+                    <span>📋</span>
+                    <span>คัดลอกสรุปลำดับทั้งหมด</span>
+                </button>
+                <button onclick="resetAllFromFinalModal()" class="py-3.5 px-5 rounded-2xl bg-violet-100 hover:bg-violet-200 text-violet-800 font-display font-bold text-base transition flex items-center justify-center gap-2 cursor-pointer">
+                    <span>🔄</span>
+                    <span>เริ่มสุ่มรอบใหม่</span>
+                </button>
+                <button onclick="closeFinalResultsModal()" class="py-3.5 px-4 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-600 font-medium text-sm transition cursor-pointer">
+                    ปิด
                 </button>
             </div>
         </div>
@@ -981,6 +1022,69 @@
             showToast(`บันทึก "${lastName}" ลงในลำดับที่ ${selectedHistory.length} เรียบร้อย!`, '🏁');
         }
 
+        // เปิดหน้าต่างสรุปลำดับทั้งหมดเมื่อสุ่มครบทุกคน
+        function openFinalResultsModal() {
+            const modal = document.getElementById('finalResultsModal');
+            const titleEl = document.getElementById('finalModalTitle');
+            const gridEl = document.getElementById('finalResultsGrid');
+            if (!modal || !gridEl) return;
+
+            if (titleEl) {
+                titleEl.textContent = `สรุปลำดับ${headerData.title} (${selectedHistory.length} คน)`;
+            }
+
+            gridEl.innerHTML = selectedHistory.map((item, idx) => {
+                const rank = idx + 1;
+                let badgeClass = 'bg-slate-100 text-slate-700 border-slate-200';
+                let rankIcon = `#${rank}`;
+                let rowBg = 'bg-slate-50/90 border-slate-200/80';
+
+                if (rank === 1) {
+                    badgeClass = 'bg-amber-400 text-amber-950 border-amber-500 shadow-sm';
+                    rankIcon = '🥇 1';
+                    rowBg = 'bg-gradient-to-r from-amber-50 to-yellow-50/70 border-amber-300';
+                } else if (rank === 2) {
+                    badgeClass = 'bg-slate-300 text-slate-900 border-slate-400 shadow-sm';
+                    rankIcon = '🥈 2';
+                    rowBg = 'bg-gradient-to-r from-slate-100 to-slate-50 border-slate-300';
+                } else if (rank === 3) {
+                    badgeClass = 'bg-amber-600 text-white border-amber-700 shadow-sm';
+                    rankIcon = '🥉 3';
+                    rowBg = 'bg-gradient-to-r from-orange-50 to-amber-50/60 border-orange-200';
+                }
+
+                return `
+                    <div class="flex items-center justify-between gap-3 px-4 py-3 rounded-2xl border ${rowBg}">
+                        <div class="flex items-center gap-3.5 min-w-0">
+                            <span class="min-w-[3.2rem] h-9 px-2.5 rounded-xl border ${badgeClass} font-display font-extrabold text-sm sm:text-base flex items-center justify-center shrink-0">
+                                ${rankIcon}
+                            </span>
+                            <span class="font-display text-base sm:text-lg font-bold text-slate-800 truncate">
+                                ${escapeHTML(item.name)}
+                            </span>
+                        </div>
+                        <span class="text-xs text-slate-400 shrink-0">${item.time || ''}</span>
+                    </div>
+                `;
+            }).join('');
+
+            modal.classList.remove('hidden');
+        }
+
+        function closeFinalResultsModal() {
+            const modal = document.getElementById('finalResultsModal');
+            if (modal) modal.classList.add('hidden');
+        }
+
+        function resetAllFromFinalModal() {
+            closeFinalResultsModal();
+            const restored = selectedHistory.map(item => item.name);
+            activeNames.push(...restored);
+            selectedHistory = [];
+            saveAndRenderAll();
+            showToast('นำรายชื่อทั้งหมดกลับเข้าวงล้อเพื่อเริ่มรอบใหม่แล้ว', '🔄');
+        }
+
         // --- 7. จัดการรายชื่อและตารางลำดับ ---
         function handleInputKeyPress(e) {
             if (e.key === 'Enter' && !e.shiftKey) {
@@ -1077,6 +1181,16 @@
             if (remainingCountEl) remainingCountEl.textContent = activeNames.length;
             if (remainingBadgeEl) remainingBadgeEl.textContent = activeNames.length;
             if (historyCountEl) historyCountEl.textContent = selectedHistory.length;
+
+            // แสดงปุ่มดูสรุปลำดับทั้งหมดบนวงล้อเมื่อสุ่มครบทุกคนแล้ว
+            const viewFinalBtn = document.getElementById('viewFinalResultsBtn');
+            if (viewFinalBtn) {
+                if (activeNames.length === 0 && selectedHistory.length > 0) {
+                    viewFinalBtn.classList.remove('hidden');
+                } else {
+                    viewFinalBtn.classList.add('hidden');
+                }
+            }
 
             // แสดง/ซ่อนปุ่มลัดเมื่อเหลือชื่อสุดท้ายในวงล้อ 1 คนเท่านั้น
             const lastShortcutEl = document.getElementById('lastPersonShortcut');
@@ -1213,24 +1327,33 @@
             isPresentationMode = !isPresentationMode;
             const controlPanel = document.getElementById('controlPanelSection');
             const wheelSection = document.getElementById('wheelSection');
+            const wheelWrapper = document.getElementById('wheelWrapper');
             const textEl = document.getElementById('presentModeText');
 
             if (isPresentationMode) {
                 if (controlPanel) controlPanel.classList.add('hidden');
                 if (wheelSection) {
                     wheelSection.classList.remove('lg:col-span-7');
-                    wheelSection.classList.add('lg:col-span-12', 'max-w-2xl', 'mx-auto', 'w-full');
+                    wheelSection.classList.add('lg:col-span-12', 'max-w-4xl', 'mx-auto', 'w-full');
+                }
+                if (wheelWrapper) {
+                    wheelWrapper.classList.remove('max-w-[440px]');
+                    wheelWrapper.classList.add('max-w-[min(64vh,580px)]');
                 }
                 if (textEl) textEl.textContent = 'ออกจากโหมดขึ้นจอ';
             } else {
                 if (controlPanel) controlPanel.classList.remove('hidden');
                 if (wheelSection) {
-                    wheelSection.classList.remove('lg:col-span-12', 'max-w-2xl', 'mx-auto', 'w-full');
+                    wheelSection.classList.remove('lg:col-span-12', 'max-w-4xl', 'mx-auto', 'w-full');
                     wheelSection.classList.add('lg:col-span-7');
+                }
+                if (wheelWrapper) {
+                    wheelWrapper.classList.remove('max-w-[min(64vh,580px)]');
+                    wheelWrapper.classList.add('max-w-[440px]');
                 }
                 if (textEl) textEl.textContent = 'โหมดขึ้นจอ';
             }
-            setTimeout(resizeCanvas, 50);
+            setTimeout(resizeCanvas, 60);
         }
 
         function toggleSound() {
@@ -1377,10 +1500,11 @@
             e.stopImmediatePropagation();
 
             const winnerModal = document.getElementById('winnerModal');
+            const finalModal = document.getElementById('finalResultsModal');
             const installModal = document.getElementById('installModal');
             const confirmModal = document.getElementById('confirmDialogModal');
 
-            if (!installModal.classList.contains('hidden') || !confirmModal.classList.contains('hidden')) {
+            if (!installModal.classList.contains('hidden') || !confirmModal.classList.contains('hidden') || (finalModal && !finalModal.classList.contains('hidden'))) {
                 return;
             }
 
